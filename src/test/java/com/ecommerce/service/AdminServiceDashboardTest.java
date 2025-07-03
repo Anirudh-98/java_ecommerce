@@ -79,8 +79,9 @@ class AdminServiceDashboardTest {
     void getDashboardAnalytics_calculatesCorrectly() {
         when(productRepository.count()).thenReturn(150L);
 
-        List<User> allUsers = Arrays.asList(approvedSeller1, approvedSeller2, pendingSeller, regularUser);
-        when(userRepository.findAll()).thenReturn(allUsers);
+        List<User> allUserList = Arrays.asList(approvedSeller1, approvedSeller2, pendingSeller, regularUser);
+        when(userRepository.findAll()).thenReturn(allUserList); // Used for counting approved sellers
+        when(userRepository.count()).thenReturn((long) allUserList.size()); // Used for totalUsers
 
         when(orderRepository.sumTotalAmountByStatus(OrderStatus.COMPLETED)).thenReturn(BigDecimal.valueOf(12500.75));
 
@@ -90,13 +91,15 @@ class AdminServiceDashboardTest {
         assertEquals(150L, analytics.getTotalProducts());
         assertEquals(2L, analytics.getTotalSellers()); // Only approved sellers
         assertEquals(BigDecimal.valueOf(12500.75), analytics.getTotalRevenue());
+        assertEquals(4L, analytics.getTotalUsers()); // Total users from the list
     }
 
     @Test
     void getDashboardAnalytics_noCompletedOrders_revenueIsZero() {
         when(productRepository.count()).thenReturn(50L);
-        List<User> allUsers = Arrays.asList(approvedSeller1);
-        when(userRepository.findAll()).thenReturn(allUsers);
+        List<User> allUserList = Arrays.asList(approvedSeller1);
+        when(userRepository.findAll()).thenReturn(allUserList);
+        when(userRepository.count()).thenReturn((long) allUserList.size());
         when(orderRepository.sumTotalAmountByStatus(OrderStatus.COMPLETED)).thenReturn(null); // Simulate no completed orders
 
         AdminDashboardAnalyticsResponse analytics = adminService.getDashboardAnalytics();
@@ -105,13 +108,15 @@ class AdminServiceDashboardTest {
         assertEquals(50L, analytics.getTotalProducts());
         assertEquals(1L, analytics.getTotalSellers());
         assertEquals(BigDecimal.ZERO, analytics.getTotalRevenue());
+        assertEquals(1L, analytics.getTotalUsers());
     }
 
     @Test
     void getDashboardAnalytics_noApprovedSellers_countIsZero() {
         when(productRepository.count()).thenReturn(20L);
-        List<User> allUsers = Arrays.asList(pendingSeller, regularUser); // No approved sellers
-        when(userRepository.findAll()).thenReturn(allUsers);
+        List<User> allUserList = Arrays.asList(pendingSeller, regularUser); // No approved sellers
+        when(userRepository.findAll()).thenReturn(allUserList);
+        when(userRepository.count()).thenReturn((long) allUserList.size());
         when(orderRepository.sumTotalAmountByStatus(OrderStatus.COMPLETED)).thenReturn(BigDecimal.valueOf(100.00));
 
         AdminDashboardAnalyticsResponse analytics = adminService.getDashboardAnalytics();
@@ -120,5 +125,6 @@ class AdminServiceDashboardTest {
         assertEquals(20L, analytics.getTotalProducts());
         assertEquals(0L, analytics.getTotalSellers());
         assertEquals(BigDecimal.valueOf(100.00), analytics.getTotalRevenue());
+        assertEquals(2L, analytics.getTotalUsers());
     }
 }

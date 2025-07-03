@@ -83,11 +83,13 @@ public class AdminService {
                 .filter(user -> user.getRoles().contains(Role.SELLER) && user.getStatus() == UserStatus.APPROVED)
                 .count();
 
+        long totalUsers = userRepository.count(); // Total number of all users
+
         BigDecimal totalRevenue = orderRepository.sumTotalAmountByStatus(OrderStatus.COMPLETED);
         if (totalRevenue == null) {
             totalRevenue = BigDecimal.ZERO;
         }
 
-        return new AdminDashboardAnalyticsResponse(totalProducts, totalSellers, totalRevenue);
+        return new AdminDashboardAnalyticsResponse(totalProducts, totalSellers, totalRevenue, totalUsers);
     }
 }

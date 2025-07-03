@@ -6,11 +6,13 @@ public class AdminDashboardAnalyticsResponse {
     private long totalProducts;
     private long totalSellers;
     private BigDecimal totalRevenue;
+    private long totalUsers; // New field
 
-    public AdminDashboardAnalyticsResponse(long totalProducts, long totalSellers, BigDecimal totalRevenue) {
+    public AdminDashboardAnalyticsResponse(long totalProducts, long totalSellers, BigDecimal totalRevenue, long totalUsers) {
         this.totalProducts = totalProducts;
         this.totalSellers = totalSellers;
         this.totalRevenue = totalRevenue;
+        this.totalUsers = totalUsers;
     }
 
     // Getters
@@ -26,6 +28,10 @@ public class AdminDashboardAnalyticsResponse {
         return totalRevenue;
     }
 
+    public long getTotalUsers() {
+        return totalUsers;
+    }
+
     // Setters (optional, depending on usage)
     public void setTotalProducts(long totalProducts) {
         this.totalProducts = totalProducts;
@@ -37,5 +43,9 @@ public class AdminDashboardAnalyticsResponse {
 
     public void setTotalRevenue(BigDecimal totalRevenue) {
         this.totalRevenue = totalRevenue;
+    }
+
+    public void setTotalUsers(long totalUsers) {
+        this.totalUsers = totalUsers;
     }
 }
