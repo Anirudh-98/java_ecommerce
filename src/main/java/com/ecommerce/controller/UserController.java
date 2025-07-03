@@ -1,9 +1,12 @@
 package com.ecommerce.controller;
 
+import com.ecommerce.model.CartItem;
 import com.ecommerce.model.Product;
+import com.ecommerce.payload.request.CartItemQuantityRequest;
 import com.ecommerce.payload.response.MessageResponse;
 import com.ecommerce.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -71,12 +74,22 @@ public class UserController {
     // Cart Management
     @PostMapping("/cart/add/{productId}")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
-    public ResponseEntity<?> addProductToCart(Authentication authentication, @PathVariable Long productId) {
+    public ResponseEntity<?> addProductToCart(Authentication authentication,
+                                              @PathVariable Long productId,
+                                              @RequestBody(required = false) CartItemQuantityRequest quantityRequest) {
         try {
-            userService.addProductToCart(getCurrentUsername(authentication), productId);
-            return ResponseEntity.ok(new MessageResponse("Product added to cart successfully!"));
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
+            String username = getCurrentUsername(authentication);
+            int quantity = (quantityRequest != null) ? quantityRequest.getQuantity() : 1;
+            if (quantity < 1) {
+                 return ResponseEntity.badRequest().body(new MessageResponse("Error: Quantity must be at least 1."));
+            }
+            userService.addProductToCart(username, productId, quantity);
+            return ResponseEntity.ok(new MessageResponse("Product added/updated in cart successfully!"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Error: " + e.getMessage()));
+        }
+        catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new MessageResponse(e.getMessage()));
         }
     }
 
@@ -91,12 +104,34 @@ public class UserController {
         }
     }
 
+    @PutMapping("/cart/increase/{productId}")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    public ResponseEntity<?> increaseCartItemQuantity(Authentication authentication, @PathVariable Long productId) {
+        try {
+            userService.increaseCartItemQuantity(getCurrentUsername(authentication), productId);
+            return ResponseEntity.ok(new MessageResponse("Item quantity increased successfully!"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
+        }
+    }
+
+    @PutMapping("/cart/decrease/{productId}")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    public ResponseEntity<?> decreaseCartItemQuantity(Authentication authentication, @PathVariable Long productId) {
+        try {
+            userService.decreaseCartItemQuantity(getCurrentUsername(authentication), productId);
+            return ResponseEntity.ok(new MessageResponse("Item quantity decreased successfully! Item removed if quantity was 1."));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
+        }
+    }
+
     @GetMapping("/cart")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
-    public ResponseEntity<?> getCartProducts(Authentication authentication) {
+    public ResponseEntity<?> getCartItems(Authentication authentication) {
         try {
-            Set<Product> products = userService.getCartProducts(getCurrentUsername(authentication));
-            return ResponseEntity.ok(products);
+            Set<CartItem> items = userService.getCartItems(getCurrentUsername(authentication));
+            return ResponseEntity.ok(items);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
         }

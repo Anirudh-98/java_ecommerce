@@ -16,11 +16,8 @@ public class Cart {
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(name = "cart_products",
-            joinColumns = @JoinColumn(name = "cart_id"),
-            inverseJoinColumns = @JoinColumn(name = "product_id"))
-    private Set<Product> products = new HashSet<>();
+    @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private Set<CartItem> items = new HashSet<>();
 
     // Constructors
     public Cart() {
@@ -47,19 +44,31 @@ public class Cart {
         this.user = user;
     }
 
-    public Set<Product> getProducts() {
-        return products;
+    public Set<CartItem> getItems() {
+        return items;
     }
 
-    public void setProducts(Set<Product> products) {
-        this.products = products;
+    public void setItems(Set<CartItem> items) {
+        this.items = items;
     }
 
-    public void addProduct(Product product) {
-        this.products.add(product);
+    // Helper methods for managing items
+    public void addItem(CartItem item) {
+        items.add(item);
+        item.setCart(this);
     }
 
-    public void removeProduct(Product product) {
-        this.products.remove(product);
+    public void removeItem(CartItem item) {
+        items.remove(item);
+        item.setCart(null);
+    }
+
+    public CartItem findItemByProduct(Product product) {
+        for (CartItem item : items) {
+            if (item.getProduct().equals(product)) {
+                return item;
+            }
+        }
+        return null;
     }
 }

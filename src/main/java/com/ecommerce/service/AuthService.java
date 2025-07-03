@@ -1,9 +1,6 @@
 package com.ecommerce.service;
 
-import com.ecommerce.model.Cart;
-import com.ecommerce.model.Role;
-import com.ecommerce.model.User;
-import com.ecommerce.model.Wishlist;
+import com.ecommerce.model.*;
 import com.ecommerce.payload.request.LoginRequest;
 import com.ecommerce.payload.request.SignupRequest;
 import com.ecommerce.payload.response.JwtResponse;
@@ -57,8 +54,17 @@ public class AuthService {
         user.setPassword(encoder.encode(signUpRequest.getPassword()));
 
         Set<Role> roles = new HashSet<>();
-        roles.add(Role.USER); // Default role
+        roles.add(Role.USER); // All users start with USER role
         user.setRoles(roles);
+
+        if (signUpRequest.isWantsToBecomeSeller()) {
+            user.setStatus(UserStatus.PENDING);
+            // Optionally, add SELLER role here if PENDING users should also have it,
+            // or add it only upon approval by admin.
+            // For now, SELLER role will be added upon approval.
+        } else {
+            user.setStatus(UserStatus.ACTIVE); // Regular user is active by default
+        }
 
         User savedUser = userRepository.save(user);
 

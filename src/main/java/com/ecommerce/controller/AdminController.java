@@ -1,8 +1,10 @@
 package com.ecommerce.controller;
 
-import com.ecommerce.model.Product;
+import com.ecommerce.model.Product; // Keep if still used for viewing products
 import com.ecommerce.model.User;
-import com.ecommerce.payload.request.ProductRequest;
+// Remove ProductRequest if admin no longer adds products
+// import com.ecommerce.payload.request.ProductRequest;
+import com.ecommerce.payload.response.AdminDashboardAnalyticsResponse;
 import com.ecommerce.payload.response.MessageResponse;
 import com.ecommerce.service.AdminService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,35 +24,11 @@ public class AdminController {
     @Autowired
     private AdminService adminService;
 
-    // Product Management
-    @PostMapping("/products/add")
-    public ResponseEntity<?> addProduct(@Valid @RequestBody ProductRequest productRequest) {
-        try {
-            Product product = adminService.addProduct(productRequest);
-            return ResponseEntity.ok(product);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(new MessageResponse("Error adding product: " + e.getMessage()));
-        }
-    }
-
-    @PutMapping("/products/update/{productId}")
-    public ResponseEntity<?> updateProduct(@PathVariable Long productId, @Valid @RequestBody ProductRequest productRequest) {
-        try {
-            Product updatedProduct = adminService.updateProduct(productId, productRequest);
-            return ResponseEntity.ok(updatedProduct);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
-        }
-    }
-
-    @DeleteMapping("/products/delete/{productId}")
-    public ResponseEntity<?> deleteProduct(@PathVariable Long productId) {
-        try {
-            adminService.deleteProduct(productId);
-            return ResponseEntity.ok(new MessageResponse("Product deleted successfully!"));
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
-        }
+    // Product Viewing (Admin might still need to view all products)
+    @GetMapping("/products")
+    public ResponseEntity<List<Product>> getAllProducts() {
+        List<Product> products = adminService.getAllProducts();
+        return ResponseEntity.ok(products);
     }
 
     @GetMapping("/products/{productId}")
@@ -63,11 +41,6 @@ public class AdminController {
         }
     }
 
-    @GetMapping("/products")
-    public ResponseEntity<List<Product>> getAllProducts() {
-        List<Product> products = adminService.getAllProducts();
-        return ResponseEntity.ok(products);
-    }
 
     // User Management
     @GetMapping("/users")
@@ -88,5 +61,42 @@ public class AdminController {
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
         }
+    }
+
+    // Seller Management Endpoints
+    @GetMapping("/sellers/pending")
+    public ResponseEntity<List<User>> getPendingSellers() {
+        List<User> pendingSellers = adminService.getPendingSellers();
+        pendingSellers.forEach(user -> user.setPassword(null)); // Mask password
+        return ResponseEntity.ok(pendingSellers);
+    }
+
+    @PostMapping("/sellers/approve/{userId}")
+    public ResponseEntity<?> approveSeller(@PathVariable Long userId) {
+        try {
+            User approvedSeller = adminService.approveSeller(userId);
+            approvedSeller.setPassword(null); // Mask password
+            return ResponseEntity.ok(new MessageResponse("Seller approved successfully. User ID: " + approvedSeller.getId()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
+        }
+    }
+
+    @PostMapping("/sellers/reject/{userId}")
+    public ResponseEntity<?> rejectSeller(@PathVariable Long userId) {
+        try {
+            User rejectedSeller = adminService.rejectSeller(userId);
+            rejectedSeller.setPassword(null); // Mask password
+            return ResponseEntity.ok(new MessageResponse("Seller rejected successfully. User ID: " + rejectedSeller.getId()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
+        }
+    }
+
+    // Dashboard Analytics Endpoint
+    @GetMapping("/dashboard")
+    public ResponseEntity<AdminDashboardAnalyticsResponse> getDashboardAnalytics() {
+        AdminDashboardAnalyticsResponse analytics = adminService.getDashboardAnalytics();
+        return ResponseEntity.ok(analytics);
     }
 }

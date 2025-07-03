@@ -25,6 +25,9 @@ public class UserService {
     @Autowired
     private CartRepository cartRepository;
 
+    @Autowired
+    private CartItemRepository cartItemRepository;
+
     public List<Product> getAllProducts() {
         return productRepository.findAll();
     }
@@ -69,7 +72,10 @@ public class UserService {
 
     // Cart operations
     @Transactional
-    public Cart addProductToCart(String username, Long productId) {
+    public Cart addProductToCart(String username, Long productId, int quantity) {
+        if (quantity < 1) {
+            throw new IllegalArgumentException("Quantity must be at least 1.");
+        }
         User user = getCurrentUser(username);
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Product not found with id: " + productId));
@@ -78,8 +84,16 @@ public class UserService {
                     Cart newCart = new Cart(user);
                     return cartRepository.save(newCart);
                 });
-        cart.addProduct(product);
-        return cartRepository.save(cart);
+
+        CartItem cartItem = cart.findItemByProduct(product);
+        if (cartItem != null) {
+            cartItem.setQuantity(cartItem.getQuantity() + quantity);
+        } else {
+            cartItem = new CartItem(cart, product, quantity);
+            cart.addItem(cartItem); // This also sets cart in cartItem
+        }
+        // cartItemRepository.save(cartItem); // Cascade should handle this if cart is saved
+        return cartRepository.save(cart); // Saving cart will cascade to items
     }
 
     @Transactional
@@ -89,14 +103,70 @@ public class UserService {
                 .orElseThrow(() -> new RuntimeException("Product not found with id: " + productId));
         Cart cart = cartRepository.findByUser(user)
                 .orElseThrow(() -> new RuntimeException("Cart not found for user: " + username));
-        cart.removeProduct(product);
+
+        CartItem cartItem = cart.findItemByProduct(product);
+        if (cartItem != null) {
+            cart.removeItem(cartItem); // This also sets cartItem.setCart(null)
+            cartItemRepository.delete(cartItem); // Explicitly delete the orphan CartItem
+                                                 // orphanRemoval=true on Cart.items should also handle this
+                                                 // when cart is saved. Explicit delete is safer.
+        } else {
+            throw new RuntimeException("Product not found in cart.");
+        }
         return cartRepository.save(cart);
     }
 
-    public Set<Product> getCartProducts(String username) {
+    @Transactional
+    public Cart increaseCartItemQuantity(String username, Long productId) {
+        User user = getCurrentUser(username);
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Product not found with id: " + productId));
+        Cart cart = cartRepository.findByUser(user)
+                .orElseThrow(() -> new RuntimeException("Cart not found for user: " + username));
+
+        CartItem cartItem = cart.findItemByProduct(product);
+        if (cartItem != null) {
+            cartItem.setQuantity(cartItem.getQuantity() + 1);
+            // cartItemRepository.save(cartItem); // Cascade should handle
+        } else {
+            throw new RuntimeException("Product not found in cart to increase quantity.");
+        }
+        return cartRepository.save(cart);
+    }
+
+    @Transactional
+    public Cart decreaseCartItemQuantity(String username, Long productId) {
+        User user = getCurrentUser(username);
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Product not found with id: " + productId));
+        Cart cart = cartRepository.findByUser(user)
+                .orElseThrow(() -> new RuntimeException("Cart not found for user: " + username));
+
+        CartItem cartItem = cart.findItemByProduct(product);
+        if (cartItem != null) {
+            int newQuantity = cartItem.getQuantity() - 1;
+            if (newQuantity < 1) {
+                // Remove item from cart if quantity drops below 1
+                cart.removeItem(cartItem);
+                cartItemRepository.delete(cartItem); // Explicit delete
+            } else {
+                cartItem.setQuantity(newQuantity);
+                // cartItemRepository.save(cartItem); // Cascade should handle
+            }
+        } else {
+            throw new RuntimeException("Product not found in cart to decrease quantity.");
+        }
+        return cartRepository.save(cart);
+    }
+
+
+    public Set<CartItem> getCartItems(String username) {
         User user = getCurrentUser(username);
         Cart cart = cartRepository.findByUser(user)
                 .orElseThrow(() -> new RuntimeException("Cart not found for user: " + username));
-        return cart.getProducts();
+        // Ensure items are fetched if LAZY loading
+        // Forcing initialization if needed, though accessing cart.getItems() should trigger it.
+        // Hibernate.initialize(cart.getItems()); // Example if direct access isn't enough
+        return cart.getItems();
     }
 }

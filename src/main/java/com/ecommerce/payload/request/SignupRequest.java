@@ -12,6 +12,8 @@ public class SignupRequest {
     @Size(min = 6, max = 40)
     private String password;
 
+    private boolean wantsToBecomeSeller = false; // Default to false
+
     public String getUsername() {
         return username;
     }
@@ -26,5 +28,13 @@ public class SignupRequest {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public boolean isWantsToBecomeSeller() {
+        return wantsToBecomeSeller;
+    }
+
+    public void setWantsToBecomeSeller(boolean wantsToBecomeSeller) {
+        this.wantsToBecomeSeller = wantsToBecomeSeller;
     }
 }

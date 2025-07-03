@@ -53,8 +53,13 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .authorizeRequests()
                 .antMatchers("/api/auth/**").permitAll() // Authentication endpoints
                 .antMatchers("/api/products/view").permitAll() // Public endpoint to view products
-                .antMatchers("/api/admin/**").hasRole("ADMIN")
-                .antMatchers("/api/user/**").hasAnyRole("USER", "ADMIN")
+                // Admin routes: seller management, user viewing, dashboard
+                .antMatchers("/api/admin/sellers/**", "/api/admin/users/**", "/api/admin/dashboard").hasRole("ADMIN")
+                // Seller routes: managing their own products
+                .antMatchers("/api/seller/**").hasRole("SELLER")
+                // User routes: general user actions like cart, wishlist
+                .antMatchers("/api/user/**").hasAnyRole("USER", "ADMIN") // Admins can also be users
+                // Public product viewing is already permitted
                 .anyRequest().authenticated()
                 .and()
                 .exceptionHandling().authenticationEntryPoint(jwtAuthenticationEntryPoint)
